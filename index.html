@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - loader - ttf</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+	<script src="./scripts/opentype.min.js"></script>
+	<script src="./scripts/three.min.js"></script>
+	<script src="./scripts/TTFLoader.js"></script>
+	<script src="./scripts/PLYLoader.js"></script>
+	<script src="./src/Clock.js"></script>
+	<script src="./src/Car.js"></script>
+	<script src="scoreoutputer.min.js"></script>
+
+	<script>
+		let container;
+		let camera, cameraTarget, scene, renderer, plane, zodiac, clock;
+		let group, material;
+		let intersects;
+		let firstLetter = true;
+		let planeWidth = 750, planeHeight = 750;
+
+		let text = '子 丑 寅 卯 辰 巳 午 未 申 酉 戌 亥';
+		const height = 20,
+			size = 50,
+			hover = 30,
+			curveSegments = 4,
+			bevelThickness = 2,
+			bevelSize = 1.5;
+
+		let font = null;
+		const mirror = false;
+
+		let targetRotation = 0;
+		let targetRotationOnPointerDown = 0;
+
+		let pointerX = 0;
+		let pointerXOnPointerDown = 0;
+
+		let windowHalfX = window.innerWidth / 2;
+
+		const raycaster = new THREE.Raycaster();
+		const mouse = new THREE.Vector2();
+
+		let textConfig = {
+			size: size,
+			height: height,
+			curveSegments: curveSegments,
+			bevelThickness: bevelThickness,
+			bevelSize: bevelSize,
+			bevelEnabled: true
+		}
+
+		var scoreOutputer = new ScoreOutputer("109598029");
+		scoreOutputer.installCSS(initialScoreOutputer(() => {
+			init();
+			animate();
+		}));
+
+		function init() {
+
+			container = document.createElement('div');
+			document.body.appendChild(container);
+
+			// CAMERA
+
+			camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 2000);
+			camera.position.set(0, 1000, 1300);
+
+			cameraTarget = new THREE.Vector3(0, 300, 0);
+
+			// SCENE
+
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color(0x000000);
+			scene.fog = new THREE.Fog(0x000000, 1000, 2200);
+
+			// LIGHTS
+
+			const dirLight = new THREE.DirectionalLight(0xffffff, 0.125);
+			dirLight.position.set(0, 500, 350).normalize();
+			scene.add(dirLight);
+
+			const pointLight = new THREE.PointLight(0xffffff, 1.5);
+			pointLight.position.set(0, 500, 350);
+			pointLight.color.set(0xffffff);
+			scene.add(pointLight);
+
+			material = new THREE.MeshPhongMaterial({ color: 0x00ffff, flatShading: true });
+
+			group = new THREE.Group();
+			group.position.y = 300;
+
+			scene.add(group);
+
+			const loader = new THREE.TTFLoader();
+			const requestText = '高等計算機圖學作業';
+
+			loader.load('./font/TWKai.ttf', function (json) {
+				font = new THREE.Font(json);
+				clock = Clock();
+				group.add(clock);
+				createRequestText(requestText);
+			});
+
+			plane = new THREE.Mesh(
+				new THREE.PlaneGeometry(planeWidth, planeHeight),
+				new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true })
+			);
+			plane.rotation.x = - Math.PI / 2;
+			scene.add(plane);
+			CreateCar();
+			// RENDERER
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			container.appendChild(renderer.domElement);
+
+			// EVENTS
+
+			container.style.touchAction = 'none';
+			window.addEventListener('mousemove', onMouseMove, false);
+			container.addEventListener('pointerdown', onPointerDown);
+			window.addEventListener('resize', onWindowResize);
+		}
+
+		function onWindowResize() {
+
+			windowHalfX = window.innerWidth / 2;
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize(window.innerWidth, window.innerHeight);
+
+		}
+
+		function createRequestText(text) {
+
+			let textGeo = new THREE.TextGeometry(text, ({ ...textConfig, font: font }));
+
+			textGeo.computeBoundingBox();
+			textGeo.computeVertexNormals();
+
+			const centerOffset = - 0.5 * (textGeo.boundingBox.max.x - textGeo.boundingBox.min.x);
+
+			let textMesh = new THREE.Mesh(textGeo, material);
+
+			textMesh.position.x = centerOffset;
+			textMesh.position.y = -200;
+			textMesh.position.z = 0;
+			plane.add(textMesh);
+		}
+
+		function animate() {
+			requestAnimationFrame(animate);
+			group.rotation.y += (targetRotation - group.rotation.y) * 0.05;
+			camera.lookAt(cameraTarget);
+			renderer.render(scene, camera);
+		}
+
+		function renderRaycaster() {
+			raycaster.setFromCamera(mouse, camera);
+			intersects = raycaster.intersectObjects(zodiac.children);
+			if (intersects.length > 0) {
+				document.body.style.cursor = 'pointer';
+			} else {
+				document.body.style.cursor = 'auto';
+			}
+		}
+
+		function initialScoreOutputer(callback) {
+			scoreOutputer.addChild("創建場景", 2, true);
+			scoreOutputer.addChild("讀取字型檔", 2, true);
+			scoreOutputer.addChild("將地支以圓圈排列", 2, true);
+			scoreOutputer.addChild("滑鼠點擊12地支分別轉跳網頁", 1, true);
+			scoreOutputer.addChild("顯示\"高等計算機圖形作業\"", 1, true);
+			scoreOutputer.addChild("時鐘效果", 1, true);
+			scoreOutputer.addChild("以任何ply格式模型", 1, true);
+			scoreOutputer.renderModal(
+				document.body,
+				'rgba(100,45,58,1)',
+				'white',
+				'15pt',
+				'15px',
+				dialogTitle = '自我評分表'
+			);
+
+			scoreOutputer.installDownloadBtn();
+			scoreOutputer.renderBtn(
+				document.body,
+				"開啟自評表"
+			);
+
+			for (element of document.body.children) {
+				if (element.innerText == "開啟自評表") {
+					element.style.cssText = `position: absolute; z-index:1`
+				}
+			}
+
+			callback();
+
+		}
+		//EVENTS
+		function onPointerDown(event) {
+
+			if (event.isPrimary === false) return;
+
+			pointerXOnPointerDown = event.clientX - windowHalfX;
+			targetRotationOnPointerDown = targetRotation;
+
+			document.addEventListener('pointermove', onPointerMove);
+			document.addEventListener('pointerup', onPointerUp);
+			document.addEventListener('pointerdown', onMouseClick);
+		}
+
+		function onPointerMove(event) {
+
+			if (event.isPrimary === false) return;
+
+			pointerX = event.clientX - windowHalfX;
+
+			targetRotation = targetRotationOnPointerDown + (pointerX - pointerXOnPointerDown) * 0.02;
+
+		}
+
+		function onPointerUp() {
+
+			if (event.isPrimary === false) return;
+
+			document.removeEventListener('pointermove', onPointerMove);
+			document.removeEventListener('pointerup', onPointerUp);
+			document.removeEventListener('pointerdown', onMouseClick);
+		}
+
+		function onMouseMove(event) {
+			requestAnimationFrame(renderRaycaster);
+			mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+			mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+		}
+
+		function onMouseClick() {
+			if (intersects.length > 0) {
+				window.location.href = intersects[0].object.userData.link;
+			}
+		}
+
+	</script>
+
+</body>
+
+</html>
