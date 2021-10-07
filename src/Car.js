@@ -16,7 +16,7 @@ function CreateCar() {
             scene.add(carMesh);
         }
     );
-    window.setInterval((() => CarMove()), 30);
+    window.setInterval((() => CarMove()), 20);
     window.setInterval((() => CarForward()), 10);
 }
 
@@ -25,7 +25,7 @@ function CarMove() {
         let x = carMesh.position.x;
         let z = carMesh.position.z;
         if(Math.abs(x) > planeWidth/2 - 120 || Math.abs(z) > planeHeight/2 - 120)
-            carMesh.rotateY(Math.PI / 30 * Math.random());
+            carMesh.rotateY(Math.PI / 60);
     }
 }
 
